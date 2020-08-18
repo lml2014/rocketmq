@@ -16,7 +16,11 @@
  */
 package org.apache.rocketmq.example.quickstart;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -30,12 +34,12 @@ import org.apache.rocketmq.common.message.MessageExt;
  */
 public class Consumer {
 
-    public static void main(String[] args) throws InterruptedException, MQClientException {
+    public static void main(String[] args) throws MQClientException {
 
         /*
          * Instantiate with specified consumer group name.
          */
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("please_rename_unique_group_name_4");
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("QUICK_CONSUMER");
 
         /*
          * Specify name server addresses.
@@ -48,6 +52,7 @@ public class Consumer {
          * }
          * </pre>
          */
+        consumer.setNamesrvAddr("localhost:9876");
 
         /*
          * Specify where to start in case the specified consumer group is a brand new one.
@@ -55,9 +60,17 @@ public class Consumer {
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
         /*
+         * Maximum amount of time in minutes a message may block the consuming thread. default 15
+         */
+        consumer.setConsumeTimeout(15);
+
+        /*
          * Subscribe one more more topics to consume.
          */
-        consumer.subscribe("TopicTest", "*");
+        consumer.subscribe("Quick", "*");
+
+
+        Set<String> msgIds = new HashSet<>();
 
         /*
          *  Register callback to execute on arrival of messages fetched from brokers.
@@ -66,8 +79,24 @@ public class Consumer {
 
             @Override
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
-                ConsumeConcurrentlyContext context) {
+                                                            ConsumeConcurrentlyContext context) {
+                MessageExt messageExt = msgs.get(0);
+                System.out.println(messageExt.getMsgId() + " consumer times:" + messageExt.getReconsumeTimes() + " ack:" + context.getAckIndex() + " delay:" + context.getDelayLevelWhenNextConsume());
+//                if (msgIds.contains(messageExt.getMsgId())) {
+//                    System.out.println("发生了重试操作！");
+//                    return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+//                }
+//                msgIds.add(messageExt.getMsgId());
+
                 System.out.printf("%s Receive New Messages: %s %n", Thread.currentThread().getName(), msgs);
+
+//                try {
+//                    Thread.sleep(2 * 60 * 1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("return success!");
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });
